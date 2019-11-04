@@ -2,6 +2,9 @@ const { join } = require('path');
 const express = require('express');
 const next = require('next');
 const cache = require('lru-cache'); // for using least-recently-used based caching
+const https = require('https');
+const { parse } = require('url');
+const { readFileSync } = require('fs');
 
 const PORT = 8000;
 const dev = process.env.NODE_ENV !== 'production';
@@ -13,8 +16,19 @@ const ssrCache = new cache({
   maxAge: 1000 * 60 * 5, // 5 mins
 });
 
+const httpsOptions = {
+  key: readFileSync('./certificates/server.key'),
+  cert: readFileSync('./certificates/server.crt')
+};
+
 app.prepare().then(() => {
+  // const server = createServer(httpsOptions)
+  // const server = https.createServer(httpsOptions, (req, res) => {
+  //   const parsedUrl = parse(req.url, true);
+  //   handle(req, res, parsedUrl);
+  // })
   const server = express();
+  const httpsServer = https.createServer(httpsOptions, server)
 
   server.get('/', (req, res) => {
     renderAndCache(req, res, '/');
@@ -36,7 +50,7 @@ app.prepare().then(() => {
     }
   });
 
-  server.listen(PORT, err => {
+  httpsServer.listen(PORT, err => {
     if (err) throw err;
     console.log(`> Live @ https://localhost:${PORT}`);
   });
